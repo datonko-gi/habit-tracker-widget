@@ -1,0 +1,14 @@
+# Dev / build helpers and generated design previews (not part of the shipped widget)
+.scripts/
+
+# Personal / local notes
+claude_ai_custom_instructions.txt
+cleanup_report_*.txt
+
+# Runtime state (lives in %APPDATA%\HabitWidget, never in the repo)
+data.json
+
+# OS cruft
+Thumbs.db
+desktop.ini
+*.log
