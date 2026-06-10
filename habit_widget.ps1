@@ -1,6 +1,26 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# ===== Crash insulation + logging =====
+# A widget must never die from a single stray exception in a paint/timer/click.
+$script:LogFile = Join-Path $env:APPDATA "HabitWidget\widget.log"
+function Write-WidgetLog($msg) {
+    try {
+        $dir = Split-Path $script:LogFile
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+        Add-Content -Path $script:LogFile -Value "$ts  $msg" -ErrorAction SilentlyContinue
+        $fi = Get-Item $script:LogFile -ErrorAction SilentlyContinue
+        if ($fi -and $fi.Length -gt 200000) {
+            $tail = Get-Content $script:LogFile -Tail 400 -ErrorAction SilentlyContinue
+            Set-Content -Path $script:LogFile -Value $tail -ErrorAction SilentlyContinue
+        }
+    } catch {}
+}
+# Route unhandled UI-thread exceptions to a handler instead of terminating the process.
+# Must run before any window/handle is created.
+try { [System.Windows.Forms.Application]::SetUnhandledExceptionMode([System.Windows.Forms.UnhandledExceptionMode]::CatchException) } catch {}
+
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -243,12 +263,29 @@ $form.BackColor = (Get-Palette $script:Data.active).bg
 $form.TopMost = $false
 $form.Text = "HabitWidget"
 
+function Test-OnScreen($x, $y, $w, $h) {
+    # true if a meaningful chunk of the widget lands inside some screen's working area
+    foreach ($s in [System.Windows.Forms.Screen]::AllScreens) {
+        $wa = $s.WorkingArea
+        if (($x + $w) -gt ($wa.Left + 60) -and $x -lt ($wa.Right - 60) -and
+            ($y + $h) -gt ($wa.Top + 24) -and $y -lt ($wa.Bottom - 24)) { return $true }
+    }
+    return $false
+}
+
 $scr = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+$defX = $scr.Right - $script:FormW - $script:INIT_RIGHT
+$defY = $scr.Top + $script:INIT_TOP
 if ($null -ne $script:Data.posX -and $null -ne $script:Data.posY) {
-    $form.Location = New-Object System.Drawing.Point([int]$script:Data.posX, [int]$script:Data.posY)
+    $x = [int]$script:Data.posX; $y = [int]$script:Data.posY
+    if (-not (Test-OnScreen $x $y $script:FormW $script:FormH)) {
+        # saved spot is off the current monitor layout: clamp onto the primary screen, keep it near the saved edge
+        $x = [Math]::Max($scr.Left, [Math]::Min($x, $scr.Right - $script:FormW))
+        $y = [Math]::Max($scr.Top,  [Math]::Min($y, $scr.Bottom - $script:FormH))
+        Write-WidgetLog "saved pos off-screen, clamped to $x,$y"
+    }
+    $form.Location = New-Object System.Drawing.Point($x, $y)
 } else {
-    $defX = $scr.Right - $script:FormW - $script:INIT_RIGHT
-    $defY = $scr.Top + $script:INIT_TOP
     $form.Location = New-Object System.Drawing.Point([int]$defX, [int]$defY)
 }
 
@@ -641,7 +678,7 @@ $form.Add_Shown({
 
 $sinkTimer = New-Object System.Windows.Forms.Timer
 $sinkTimer.Interval = 3000
-$sinkTimer.Add_Tick({ Sink-ToBottom })
+$sinkTimer.Add_Tick({ try { Sink-ToBottom } catch { Write-WidgetLog "sink tick: $($_.Exception.Message)" } })
 $sinkTimer.Start()
 
 $form.Add_FormClosed({
@@ -650,4 +687,17 @@ $form.Add_FormClosed({
 })
 
 [System.Windows.Forms.Application]::EnableVisualStyles()
+
+# Catch any stray UI-thread exception (paint, timer, click) and keep the widget alive.
+[System.Windows.Forms.Application]::add_ThreadException({
+    param($s, $e)
+    try { Write-WidgetLog "ThreadException (recovered): $($e.Exception.Message)" } catch {}
+})
+[System.AppDomain]::CurrentDomain.add_UnhandledException({
+    param($s, $e)
+    try { Write-WidgetLog "AppDomain unhandled: $($e.ExceptionObject)" } catch {}
+})
+
+Write-WidgetLog "start (pid $PID), goals=$($script:Data.goals.Count), active=$($script:Data.active), pos=$($form.Location.X),$($form.Location.Y)"
 $form.ShowDialog() | Out-Null
+Write-WidgetLog "ShowDialog returned (window closed) pid $PID"
