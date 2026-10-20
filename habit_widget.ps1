@@ -649,6 +649,12 @@ $panel.ContextMenuStrip = $ctx
 
 # ===== Pin below other windows =====
 function Sink-ToBottom {
+    # Re-sink only when actually raised: an unconditional HWND_BOTTOM makes DWM redo the
+    # window shadow on every tick, which reads as widget shadows blinking (2026-08-13).
+    if (-not ('SinkGuard' -as [type])) {
+        Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class SinkGuard {[DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h, uint cmd);[DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);[DllImport("user32.dll", CharSet = CharSet.Auto)] public static extern int GetClassName(IntPtr h, System.Text.StringBuilder sb, int max);public static bool IsRaised(IntPtr hwnd) {IntPtr below = GetWindow(hwnd, 2);int g = 0;while (below != IntPtr.Zero && !IsWindowVisible(below) && g++ < 32) below = GetWindow(below, 2);if (below == IntPtr.Zero) return false;var sb = new System.Text.StringBuilder(64);GetClassName(below, sb, 64);string cls = sb.ToString();if (cls == "Progman" || cls == "WorkerW" || cls.StartsWith("WindowsForms10")) return false;return true;}}'
+    }
+    if (-not [SinkGuard]::IsRaised($form.Handle)) { return }
     [Native]::SetWindowPos($form.Handle, [Native]::HWND_BOTTOM, 0, 0, 0, 0,
         [Native]::SWP_NOMOVE -bor [Native]::SWP_NOSIZE -bor [Native]::SWP_NOACTIVATE) | Out-Null
 }
