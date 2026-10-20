@@ -1,0 +1,30 @@
+{
+  "repo": "datonko-gi/habit-tracker-widget",
+  "description": "Habit tracker widget for the Windows 10 and 11 desktop. Tracks several goals and streaks on a 20-week grid like a contribution graph, with weekly targets, per-goal color themes and a global hotkey. PowerShell and WinForms, no install, no dependencies.",
+  "topics": [
+    "habit-tracker",
+    "habit-tracking",
+    "streak-tracker",
+    "desktop-widget",
+    "windows-widget",
+    "contribution-graph",
+    "heatmap",
+    "daily-habits",
+    "goal-tracking",
+    "windows-11",
+    "windows-10",
+    "windows",
+    "powershell",
+    "winforms",
+    "widget",
+    "desktop",
+    "productivity",
+    "self-improvement",
+    "tracker",
+    "gui"
+  ],
+  "release_tag": "v1.1.0",
+  "release_title": "v1.1.0: no more blinking shadows, crash insulation, new README",
+  "release_notes": "Update to the June version. Your `data.json` is untouched (same format).\n\n- Fixed: window shadows no longer blink. The widget is sunk to the bottom only when something was actually raised above it.\n- Added: crash insulation. A stray exception in a paint, timer or click is logged to `%APPDATA%\\HabitWidget\\widget.log` instead of closing the widget.\n- Added: off-screen guard. A saved position that no longer fits the monitor layout is moved onto the primary screen.\n- Docs: rewritten README (install, usage, privacy, troubleshooting), CHANGELOG, new screenshots.\n\nInstall: download `habit-tracker-widget-v1.1.0.zip`, extract it anywhere, run `install.bat`. Windows 10 or 11, Windows PowerShell 5.1, no admin rights.",
+  "release_zip": "habit-tracker-widget-v1.1.0.zip"
+}
