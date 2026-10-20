@@ -1,4 +1,4 @@
-Add-Type -AssemblyName System.Windows.Forms
+﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # ===== Crash insulation + logging =====
@@ -53,7 +53,7 @@ public static class Native {
 }
 "@
 
-# HotkeyHook — subclasses the form's WndProc to catch WM_HOTKEY and raise a managed event.
+# HotkeyHook: subclasses the form's WndProc to catch WM_HOTKEY and raise a managed event.
 Add-Type -TypeDefinition @"
 using System;
 using System.Windows.Forms;
