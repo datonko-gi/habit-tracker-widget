@@ -10,7 +10,7 @@ echo Target:
 echo   %HERE%HabitWidget.vbs
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$s = New-Object -ComObject WScript.Shell; $l = $s.CreateShortcut('%LNK%'); $l.TargetPath = '%HERE%HabitWidget.vbs'; $l.WorkingDirectory = '%HERE%'; $l.Save()"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$s = New-Object -ComObject WScript.Shell; $l = $s.CreateShortcut($env:LNK); $l.TargetPath = $env:HERE + 'HabitWidget.vbs'; $l.WorkingDirectory = $env:HERE; $l.Save()"
 
 if errorlevel 1 (
     echo.
